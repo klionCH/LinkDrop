@@ -28,7 +28,7 @@ import {
     ContextMenuTrigger
 } from "@/components/ui/context-menu";
 
-export function DraggableLink({ link, onDelete, isLoading }) {
+export function DraggableLink({ link, onDelete, isLoading, onUpdate }) {
     const {
         attributes,
         listeners,
@@ -41,6 +41,16 @@ export function DraggableLink({ link, onDelete, isLoading }) {
     const style = {
         transform: CSS.Transform.toString(transform),
         zIndex: isDragging ? 999 : 'auto',
+    }
+
+    const [isEditing, setIsEditing] = useState(false)
+    const [titleInput, setTitleInput] = useState(link.title || '')
+
+    const handleSave = () => {
+        if (titleInput.trim() !== link.title) {
+            onUpdate(link.id, { title: titleInput.trim() })
+        }
+        setIsEditing(false)
     }
 
     return (
@@ -91,7 +101,27 @@ export function DraggableLink({ link, onDelete, isLoading }) {
                                     </>
                                 ) : (
                                     <>
-                                        <p className="font-semibold text-gray-900 truncate">{link.title}</p>
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                className="font-semibold text-gray-900 text-sm border border-gray-300 rounded px-1 w-full"
+                                                value={titleInput}
+                                                autoFocus
+                                                onChange={(e) => setTitleInput(e.target.value)}
+                                                onBlur={handleSave}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') handleSave()
+                                                }}
+                                            />
+                                        ) : (
+                                            <p
+                                                className="font-semibold text-gray-900 truncate cursor-pointer"
+                                                onClick={() => setIsEditing(true)}
+                                                title="Klicken zum Bearbeiten"
+                                            >
+                                                {link.title}
+                                            </p>
+                                        )}
                                         <p className="text-sm text-gray-600 truncate">{link.url}</p>
                                     </>
                                 )}
@@ -127,14 +157,10 @@ export default function LinkList({ links, loadingLinks = {}, onReorder, onDelete
     const [items, setItems] = useState([])
 
     useEffect(() => {
-        // Kombiniere reguläre Links und Links im Ladezustand
         const regularLinks = Object.values(links.Links || {})
         const loadingLinksList = Object.values(loadingLinks || {})
-
-        // Kombiniere und sortiere alle Links nach Position
         const allLinks = [...regularLinks, ...loadingLinksList]
         const sorted = allLinks.sort((a, b) => a.position - b.position)
-
         setItems(sorted)
     }, [links, loadingLinks])
 
@@ -149,6 +175,18 @@ export default function LinkList({ links, loadingLinks = {}, onReorder, onDelete
         const newItems = arrayMove(items, oldIndex, newIndex)
         setItems(newItems)
         if (onReorder) onReorder(newItems)
+    }
+
+    const handleUpdate = (id, updatedFields) => {
+        const updated = items.map((item) =>
+            item.id === id ? { ...item, ...updatedFields } : item
+        )
+
+        setItems(updated)
+
+        const updatedMap = Object.fromEntries(updated.map((l) => [l.id, l]))
+        const fullData = { Links: updatedMap }
+        localStorage.setItem("list", JSON.stringify(fullData))
     }
 
     return (
@@ -173,6 +211,7 @@ export default function LinkList({ links, loadingLinks = {}, onReorder, onDelete
                                     link={link}
                                     isLoading={link.isLoading}
                                     onDelete={onDelete}
+                                    onUpdate={handleUpdate}
                                 />
                             ))
                         )}
