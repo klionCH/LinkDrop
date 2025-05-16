@@ -17,16 +17,18 @@ import { CSS } from '@dnd-kit/utilities'
 import { useEffect, useState } from 'react'
 import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers'
 import { GripVertical } from 'lucide-react'
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton"
 import {
     ContextMenu,
     ContextMenuContent,
     ContextMenuItem,
     ContextMenuLabel,
-    ContextMenuSeparator, ContextMenuTrigger
+    ContextMenuSeparator,
+    ContextMenuTrigger
 } from "@/components/ui/context-menu";
 
-export function DraggableLink({ link, onDelete }) {
+export function DraggableLink({ link, onDelete, isLoading }) {
     const {
         attributes,
         listeners,
@@ -63,19 +65,36 @@ export function DraggableLink({ link, onDelete }) {
 
                         {/* Bild + Textblock */}
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                            {/* Bild: fix */}
-                            {link.image && (
-                                <img
-                                    src={link.image}
-                                    alt="Vorschau"
-                                    className="w-14 h-14 object-cover rounded shrink-0"
-                                />
-                            )}
+                            {/* Bild-Container mit fester Größe */}
+                            <div className="w-14 h-14 shrink-0 rounded overflow-hidden">
+                                {isLoading ? (
+                                    <Skeleton className="w-14 h-14" />
+                                ) : link.image ? (
+                                    <img
+                                        src={link.image}
+                                        alt="Vorschau"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                                        Kein Bild
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Textblock: passt sich an */}
-                            <div className="flex flex-col min-w-0">
-                                <p className="font-semibold text-gray-900 truncate">{link.title}</p>
-                                <p className="text-sm text-gray-600 truncate">{link.url}</p>
+                            <div className="flex flex-col min-w-0 flex-1">
+                                {isLoading ? (
+                                    <>
+                                        <Skeleton className="h-5 w-3/4 mb-2" />
+                                        <Skeleton className="h-4 w-1/2" />
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="font-semibold text-gray-900 truncate">{link.title}</p>
+                                        <p className="text-sm text-gray-600 truncate">{link.url}</p>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -104,14 +123,20 @@ export function DraggableLink({ link, onDelete }) {
     )
 }
 
-export default function LinkList({ links, onReorder, onDelete }) {
+export default function LinkList({ links, loadingLinks = {}, onReorder, onDelete }) {
     const [items, setItems] = useState([])
 
     useEffect(() => {
-        const list = Object.values(links.Links || {})
-        const sorted = list.sort((a, b) => a.position - b.position)
+        // Kombiniere reguläre Links und Links im Ladezustand
+        const regularLinks = Object.values(links.Links || {})
+        const loadingLinksList = Object.values(loadingLinks || {})
+
+        // Kombiniere und sortiere alle Links nach Position
+        const allLinks = [...regularLinks, ...loadingLinksList]
+        const sorted = allLinks.sort((a, b) => a.position - b.position)
+
         setItems(sorted)
-    }, [links])
+    }, [links, loadingLinks])
 
     const sensors = useSensors(useSensor(PointerSensor))
 
@@ -127,7 +152,7 @@ export default function LinkList({ links, onReorder, onDelete }) {
     }
 
     return (
-        <div className="w-full max-w-xl  p-4 space-y-2">
+        <div className="w-full max-w-xl p-4 space-y-2">
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -140,9 +165,16 @@ export default function LinkList({ links, onReorder, onDelete }) {
                 >
                     <div className="flex flex-col gap-3 max-w-[90vw] md:max-w-[700px] w-full mx-auto">
                         {items.length === 0 ? (
-                        <p className="text-gray-600">Keine Links vorhanden.</p>
+                            <p className="text-gray-600">Keine Links vorhanden.</p>
                         ) : (
-                            items.map(link => <DraggableLink key={link.id} link={link} onDelete={onDelete} />)
+                            items.map(link => (
+                                <DraggableLink
+                                    key={link.id}
+                                    link={link}
+                                    isLoading={link.isLoading}
+                                    onDelete={onDelete}
+                                />
+                            ))
                         )}
                     </div>
                 </SortableContext>

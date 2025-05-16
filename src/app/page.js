@@ -6,6 +6,7 @@ import {Button} from "@/components/ui/button";
 
 export default function Home() {
     const [data, setData] = useState({ Links: {} })
+    const [loadingLinks, setLoadingLinks] = useState({})
 
     useEffect(() => {
         const stored = localStorage.getItem("list")
@@ -21,26 +22,85 @@ export default function Home() {
     }, [data])
 
     const addLink = async (newUrl) => {
-        const response = await fetch(`/api/link-preview?url=${encodeURIComponent(newUrl)}`)
-        const preview = await response.json()
+        // Generiere eine temporäre ID für den Ladezustand
+        const tempId = `temp-${Date.now()}`
 
-        const links = data.Links
-        const newId = Object.keys(links).length + 1
-
-        const newEntry = {
-            id: newId,
+        // Erstelle einen neuen Eintrag mit Ladezustand
+        const newPosition = Object.keys(data.Links).length + 1
+        const loadingEntry = {
+            id: tempId,
             url: newUrl,
-            title: preview.title || newUrl,
-            image: preview.image || '',
-            position: newId
+            title: "Wird geladen...",
+            image: '',
+            position: newPosition,
+            isLoading: true
         }
 
-        setData({
-            Links: {
-                ...links,
-                [newId]: newEntry
+        // Füge den Ladezustand zum State hinzu
+        setLoadingLinks(prev => ({
+            ...prev,
+            [tempId]: loadingEntry
+        }))
+
+        try {
+            // Hole die Link-Vorschau
+            const response = await fetch(`/api/link-preview?url=${encodeURIComponent(newUrl)}`)
+            const preview = await response.json()
+
+            const links = data.Links
+            const newId = Object.keys(links).length + 1
+
+            const newEntry = {
+                id: newId,
+                url: newUrl,
+                title: preview.title || newUrl,
+                image: preview.image || '',
+                position: newPosition
             }
-        })
+
+            // Füge den neuen Link hinzu
+            setData(prev => ({
+                Links: {
+                    ...prev.Links,
+                    [newId]: newEntry
+                }
+            }))
+
+            // Entferne den Ladezustand
+            setLoadingLinks(prev => {
+                const updated = {...prev}
+                delete updated[tempId]
+                return updated
+            })
+        } catch (error) {
+            console.error("Fehler beim Laden der Link-Vorschau:", error)
+
+            // Bei einem Fehler fügen wir trotzdem einen Link hinzu, aber ohne Vorschau
+            const links = data.Links
+            const newId = Object.keys(links).length + 1
+
+            const fallbackEntry = {
+                id: newId,
+                url: newUrl,
+                title: newUrl,
+                image: '',
+                position: newPosition
+            }
+
+            setData(prev => ({
+                Links: {
+                    ...prev.Links,
+                    [newId]: fallbackEntry
+                }
+            }))
+
+            // Entferne den Ladezustand
+            setLoadingLinks(prev => {
+                const updated = {...prev}
+                delete updated[tempId]
+                return updated
+            })
+        }
     }
 
     const handleDelete = (id) => {
@@ -81,8 +141,6 @@ export default function Home() {
         URL.revokeObjectURL(url)
     }
 
-
-
     const handleImportFromFile = (e) => {
         const file = e.target.files?.[0]
         if (!file) return
@@ -111,10 +169,16 @@ export default function Home() {
     const handleOpenFileDialog = () => {
         fileInputRef.current?.click()
     }
+
     return (
         <div className="flex flex-col items-center pt-20">
             <AddLinkInput onUrlChange={addLink} />
-            <LinkList links={data} onReorder={reorderLinks} onDelete={handleDelete} />
+            <LinkList
+                links={data}
+                loadingLinks={loadingLinks}
+                onReorder={reorderLinks}
+                onDelete={handleDelete}
+            />
 
             {/* Fixed Export/Import Buttons */}
             <div className="fixed bottom-4 right-4 flex gap-2 z-50">
