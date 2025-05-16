@@ -9,6 +9,7 @@ export async function GET(req) {
         return NextResponse.json({ error: 'URL fehlt' }, { status: 400 })
     }
 
+
     try {
         const response = await fetch(url, {
             headers: {
