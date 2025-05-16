@@ -1,103 +1,132 @@
-import Image from "next/image";
+'use client'
+import AddLinkInput from "@/app/components/AddLinkInput"
+import LinkList from "@/app/components/LinkList"
+import {useEffect, useRef, useState} from "react"
+import {Button} from "@/components/ui/button";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    const [data, setData] = useState({ Links: {} })
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    useEffect(() => {
+        const stored = localStorage.getItem("list")
+        if (stored) {
+            setData(JSON.parse(stored))
+        } else {
+            localStorage.setItem("list", JSON.stringify({ Links: {} }))
+        }
+    }, [])
+
+    useEffect(() => {
+        localStorage.setItem("list", JSON.stringify(data))
+    }, [data])
+
+    const addLink = async (newUrl) => {
+        const response = await fetch(`/api/link-preview?url=${encodeURIComponent(newUrl)}`)
+        const preview = await response.json()
+
+        const links = data.Links
+        const newId = Object.keys(links).length + 1
+
+        const newEntry = {
+            id: newId,
+            url: newUrl,
+            title: preview.title || newUrl,
+            image: preview.image || '',
+            position: newId
+        }
+
+        setData({
+            Links: {
+                ...links,
+                [newId]: newEntry
+            }
+        })
+    }
+
+    const handleDelete = (id) => {
+        const updatedLinks = { ...data.Links }
+        delete updatedLinks[id]
+
+        const updatedData = { Links: updatedLinks }
+        setData(updatedData)
+        localStorage.setItem("list", JSON.stringify(updatedData))
+    }
+
+
+    const reorderLinks = (sortedItems) => {
+        const reorderedLinks = {}
+        sortedItems.forEach((item, index) => {
+            reorderedLinks[item.id] = {
+                ...item,
+                position: index + 1
+            }
+        })
+
+        setData({ Links: reorderedLinks })
+    }
+
+    const handleExportAsWlFile = () => {
+        const json = localStorage.getItem("list")
+        if (!json) return alert("Keine Daten gefunden.")
+
+        const blob = new Blob([json], { type: "application/json" }) // Inhalt = JSON
+        const url = URL.createObjectURL(blob)
+
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "wishlist-export.wl"
+        a.click()
+
+        URL.revokeObjectURL(url)
+    }
+
+
+
+    const handleImportFromFile = (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            try {
+                const result = event.target.result
+                const parsed = JSON.parse(result)
+                if (!parsed || typeof parsed !== "object" || !parsed.Links) {
+                    throw new Error("Ungültige Struktur")
+                }
+
+                localStorage.setItem("list", JSON.stringify(parsed))
+                window.location.reload() // oder setData(parsed), wenn State
+            } catch (err) {
+                alert("Fehler beim Importieren: Ungültige Datei.")
+                console.error(err)
+            }
+        }
+        reader.readAsText(file)
+    }
+
+    const fileInputRef = useRef(null)
+
+    const handleOpenFileDialog = () => {
+        fileInputRef.current?.click()
+    }
+    return (
+        <div className="flex flex-col items-center pt-20">
+            <AddLinkInput onUrlChange={addLink} />
+            <LinkList links={data} onReorder={reorderLinks} onDelete={handleDelete} />
+
+            {/* Fixed Export/Import Buttons */}
+            <div className="fixed bottom-4 right-4 flex gap-2 z-50">
+                <Button onClick={handleExportAsWlFile}>Exportieren</Button>
+                <Button variant="outline" onClick={handleOpenFileDialog}>Importieren</Button>
+                <input
+                    type="file"
+                    accept=".wl"
+                    onChange={handleImportFromFile}
+                    ref={fileInputRef}
+                    className="hidden"
+                />
+            </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    )
 }
