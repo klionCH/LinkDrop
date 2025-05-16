@@ -5,7 +5,8 @@ import {
     closestCenter,
     useSensor,
     useSensors,
-    PointerSensor
+    PointerSensor,
+    TouchSensor
 } from '@dnd-kit/core'
 import {
     arrayMove,
@@ -164,7 +165,19 @@ export default function LinkList({ links, loadingLinks = {}, onReorder, onDelete
         setItems(sorted)
     }, [links, loadingLinks])
 
-    const sensors = useSensors(useSensor(PointerSensor))
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 10,
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250,
+                tolerance: 5,
+            },
+        })
+    )
 
     const handleDragEnd = (event) => {
         const { active, over } = event
