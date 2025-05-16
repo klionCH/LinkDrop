@@ -66,17 +66,18 @@ export default function Home() {
     }
 
     const handleExportAsWlFile = () => {
-        const json = localStorage.getItem("list")
-        if (!json) return alert("Keine Daten gefunden.")
-
-        const blob = new Blob([json], { type: "application/json" }) // Inhalt = JSON
+        const json = JSON.stringify(data)
+        const blob = new Blob([json], {
+            type: 'application/octet-stream' // NICHT application/json!
+        })
         const url = URL.createObjectURL(blob)
 
-        const a = document.createElement("a")
+        const a = document.createElement('a')
         a.href = url
-        a.download = "wishlist-export.wl"
+        a.download = 'wishlist-export.wl' // .wl oder .json → dein Format
+        document.body.appendChild(a)
         a.click()
-
+        a.remove()
         URL.revokeObjectURL(url)
     }
 
