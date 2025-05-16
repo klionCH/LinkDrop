@@ -7,13 +7,30 @@ import {Button} from "@/components/ui/button";
 export default function Home() {
     const [data, setData] = useState({ Links: {} })
     const [loadingLinks, setLoadingLinks] = useState({})
+    // Cache für Link-Vorschauen
+    const [previewCache, setPreviewCache] = useState({})
 
     useEffect(() => {
         const stored = localStorage.getItem("list")
         if (stored) {
-            setData(JSON.parse(stored))
+            try {
+                setData(JSON.parse(stored))
+            } catch (e) {
+                console.error("Fehler beim Parsen der gespeicherten Daten:", e)
+                localStorage.setItem("list", JSON.stringify({ Links: {} }))
+            }
         } else {
             localStorage.setItem("list", JSON.stringify({ Links: {} }))
+        }
+
+        // Cache für Link-Vorschauen aus dem LocalStorage laden
+        const storedCache = localStorage.getItem("previewCache")
+        if (storedCache) {
+            try {
+                setPreviewCache(JSON.parse(storedCache))
+            } catch (e) {
+                console.error("Fehler beim Parsen des Preview-Cache:", e)
+            }
         }
     }, [])
 
@@ -21,15 +38,28 @@ export default function Home() {
         localStorage.setItem("list", JSON.stringify(data))
     }, [data])
 
+    // Cache für Link-Vorschauen speichern
+    useEffect(() => {
+        localStorage.setItem("previewCache", JSON.stringify(previewCache))
+    }, [previewCache])
+
     const addLink = async (newUrl) => {
+        // Normalisiere URL für konsistente Darstellung
+        let formattedUrl = newUrl
+        if (!formattedUrl.startsWith('http')) {
+            formattedUrl = `https://${formattedUrl}`
+        }
+
         // Generiere eine temporäre ID für den Ladezustand
         const tempId = `temp-${Date.now()}`
 
-        // Erstelle einen neuen Eintrag mit Ladezustand
+        // Bestimme die neue Position
         const newPosition = Object.keys(data.Links).length + 1
+
+        // Erstelle einen neuen Eintrag mit Ladezustand
         const loadingEntry = {
             id: tempId,
-            url: newUrl,
+            url: formattedUrl,
             title: "Wird geladen...",
             image: '',
             position: newPosition,
@@ -43,18 +73,58 @@ export default function Home() {
         }))
 
         try {
-            // Hole die Link-Vorschau
-            const response = await fetch(`/api/link-preview?url=${encodeURIComponent(newUrl)}`)
-            const preview = await response.json()
+            // Prüfen, ob die Vorschau bereits im Cache ist
+            const cacheKey = encodeURIComponent(formattedUrl)
+            let preview = previewCache[cacheKey]
+
+            if (!preview) {
+                // Wenn nicht im Cache, anfragen
+                // Hole die Link-Vorschau mit Timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 Sekunden Timeout
+
+                const response = await fetch(`/api/link-preview?url=${encodeURIComponent(formattedUrl)}`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok && response.status !== 408) { // 408 = Timeout, trotzdem weiter verarbeiten
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                preview = await response.json();
+
+                // Cache aktualisieren
+                if (!preview.error) {
+                    setPreviewCache(prev => ({
+                        ...prev,
+                        [cacheKey]: preview
+                    }))
+                }
+            }
 
             const links = data.Links
             const newId = Object.keys(links).length + 1
 
+            // Sicherstellen, dass wir einen Fallback-Titel haben
+            let title = preview.title || "Unbekannte Webseite"
+            let image = preview.image || ''
+
+            // Fallback: Domain als Titel verwenden
+            if (title === "Unbekannte Webseite") {
+                try {
+                    const urlObj = new URL(formattedUrl);
+                    title = urlObj.hostname;
+                } catch (e) {
+                    // URL konnte nicht geparst werden, beim Fallback bleiben
+                }
+            }
+
             const newEntry = {
                 id: newId,
-                url: newUrl,
-                title: preview.title || newUrl,
-                image: preview.image || '',
+                url: formattedUrl,
+                title,
+                image,
                 position: newPosition
             }
 
@@ -79,10 +149,19 @@ export default function Home() {
             const links = data.Links
             const newId = Object.keys(links).length + 1
 
+            // URL-Objekt erstellen, um den Hostnamen zu extrahieren
+            let hostname;
+            try {
+                const urlObj = new URL(formattedUrl);
+                hostname = urlObj.hostname;
+            } catch (e) {
+                hostname = formattedUrl;
+            }
+
             const fallbackEntry = {
                 id: newId,
-                url: newUrl,
-                title: newUrl,
+                url: formattedUrl,
+                title: hostname || formattedUrl,
                 image: '',
                 position: newPosition
             }
@@ -104,6 +183,17 @@ export default function Home() {
     }
 
     const handleDelete = (id) => {
+        // Wenn es sich um einen Link im Ladezustand handelt
+        if (id.toString().startsWith('temp-')) {
+            setLoadingLinks(prev => {
+                const updated = {...prev}
+                delete updated[id]
+                return updated
+            })
+            return
+        }
+
+        // Ansonsten normalen Link löschen
         const updatedLinks = { ...data.Links }
         delete updatedLinks[id]
 
@@ -114,8 +204,11 @@ export default function Home() {
 
 
     const reorderLinks = (sortedItems) => {
+        // Filtere temporäre Lade-Links heraus, da wir nur die echten Links neu ordnen wollen
+        const realLinks = sortedItems.filter(item => !item.id.toString().startsWith('temp-'))
+
         const reorderedLinks = {}
-        sortedItems.forEach((item, index) => {
+        realLinks.forEach((item, index) => {
             reorderedLinks[item.id] = {
                 ...item,
                 position: index + 1
@@ -155,7 +248,7 @@ export default function Home() {
                 }
 
                 localStorage.setItem("list", JSON.stringify(parsed))
-                window.location.reload() // oder setData(parsed), wenn State
+                setData(parsed) // State direkt setzen statt Seite neu zu laden
             } catch (err) {
                 alert("Fehler beim Importieren: Ungültige Datei.")
                 console.error(err)
