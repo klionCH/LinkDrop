@@ -48,9 +48,7 @@ async function fetchTwitterMetadata(url) {
             const response = await fetch(apiUrl);
             if (response.ok) {
                 const data = await response.json();
-                // Twitter oEmbed gibt kein direktes Bild für Tweets.
-                // Wir könnten das Profilbild des Autors verwenden, ist aber nicht immer das, was man erwartet.
-                // Daher lassen wir das Bild hier leer.
+
                 return { title: data.text || '', image: '' };
             }
         } catch (error) {
@@ -113,7 +111,6 @@ export async function GET(request) {
 
     let metadata = null;
 
-    // Versuche, plattformspezifische APIs zu verwenden
     metadata = await fetchYouTubeMetadata(url);
     if (metadata) {
         return NextResponse.json(metadata);
@@ -129,7 +126,6 @@ export async function GET(request) {
         return NextResponse.json(metadata);
     }
 
-    // Wenn keine spezifische API gefunden wurde, scrape die Daten
     metadata = await scrapeMetadata(url);
     return NextResponse.json(metadata);
 }

@@ -1,5 +1,6 @@
 'use client'
-import { Trash2 } from "lucide-react"
+import {CopyIcon, Trash2} from "lucide-react"
+import { toast } from 'sonner'
 import {
     DndContext,
     closestCenter,
@@ -142,6 +143,17 @@ export function DraggableLink({ link, onDelete, isLoading, onUpdate }) {
             <ContextMenuContent>
                 <ContextMenuLabel>Link-Aktion</ContextMenuLabel>
                 <ContextMenuSeparator />
+                <ContextMenuItem
+                    onClick={() => {
+                        navigator.clipboard.writeText(link.url)
+                        toast("Link kopiert", {
+                            description: "Die URL wurde in die Zwischenablage kopiert.",
+                        })
+                    }}
+                >
+                    <CopyIcon className="mr-2 h-4 w-4" />
+                    Link kopieren
+                </ContextMenuItem>
                 <ContextMenuItem
                     className="text-red-600"
                     onClick={() => onDelete(link.id)}

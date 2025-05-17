@@ -2,6 +2,7 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import {toast} from "sonner";
 
 export default function AddLinkInput({ onUrlChange }) {
     const [value, setValue] = useState("")
@@ -12,6 +13,9 @@ export default function AddLinkInput({ onUrlChange }) {
             onUrlChange(value.trim())
             setValue("")
         }
+        toast("Link Hinzugefügt", {
+            description: "Der Link wurde der Liste hinzugefügt.",
+        })
     }
 
     return (
