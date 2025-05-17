@@ -67,7 +67,7 @@ export function DraggableLink({ link, onDelete, isLoading, onUpdate }) {
                     <div
                         {...attributes}
                         {...listeners}
-                        className="cursor-grab text-gray-500 hover:text-black pt-1"
+                        className="cursor-grab touch-none text-gray-500 hover:text-black pt-1"
                     >
                         <GripVertical size={18} />
                     </div>
