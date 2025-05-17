@@ -1,119 +1,54 @@
-import { NextResponse } from 'next/server'
-import * as cheerio from 'cheerio'
+// app/api/link-preview/route.js
+import { NextResponse } from 'next/server';
+import fetch from 'node-fetch';
+import * as cheerio from 'cheerio'; // Change this line
 
-export const config = {
-    runtime: 'edge',
-}
-
-export async function GET(req) {
-    const { searchParams } = new URL(req.url)
-    const url = searchParams.get('url')
+export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const url = searchParams.get('url');
 
     if (!url) {
-        return NextResponse.json({ error: 'URL fehlt' }, { status: 400 })
-    }
-
-    let normalizedUrl;
-    try {
-        normalizedUrl = url.startsWith('http') ? url : `https://${url}`
-        new URL(normalizedUrl)
-    } catch {
-        return NextResponse.json({ error: 'Ungültiges URL-Format' }, { status: 400 })
+        return NextResponse.json({ error: 'URL parameter is missing' }, { status: 400 });
     }
 
     try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 Sekunden Timeout
 
-        const response = await fetch(normalizedUrl, {
+        const response = await fetch(url, {
             headers: {
-                'User-Agent': 'Mozilla/5.0',
-                'Accept': 'text/html',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             },
             signal: controller.signal,
-            cache: 'no-store',
-            redirect: 'follow',
-        })
+        });
+        clearTimeout(timeoutId);
 
-        clearTimeout(timeoutId)
-
-        const contentType = response.headers.get('content-type')
-        if (!contentType?.includes('text/html')) {
-            return NextResponse.json({
-                title: new URL(normalizedUrl).hostname,
-                url: normalizedUrl,
-                image: '',
-            })
+        if (!response.ok && response.status !== 408) {
+            return NextResponse.json({ error: `HTTP error! status: ${response.status}` }, { status: response.status });
         }
 
-        const html = await response.text()
-        const $ = cheerio.load(html)
+        const html = await response.text();
+        const $ = cheerio.load(html);
 
-        const title = $('meta[property="og:title"]').attr('content') ||
-            $('meta[name="twitter:title"]').attr('content') ||
-            $('title').text() ||
-            $('h1').first().text() ||
-            new URL(normalizedUrl).hostname
+        let title = $('title').text() || $('meta[property="og:title"]').attr('content') || $('meta[name="twitter:title"]').attr('content') || '';
+        let image = $('meta[property="og:image"]').attr('content') || $('meta[name="twitter:image"]').attr('content') || $('link[rel="icon"]').attr('href') || $('link[rel="shortcut icon"]').attr('href') || '';
 
-        let image = $('meta[property="og:image"]').attr('content') ||
-            $('meta[property="og:image:secure_url"]').attr('content') ||
-            $('meta[name="twitter:image"]').attr('content') ||
-            $('meta[itemprop="image"]').attr('content') || ''
-
-        if (image && !image.match(/^https?:\/\//)) {
-            const base = new URL(normalizedUrl)
-            if (image.startsWith('//')) {
-                image = `https:${image}`
-            } else if (image.startsWith('/')) {
-                image = `${base.origin}${image}`
-            } else {
-                image = `${base.origin}/${image}`
+        // Sicherstellen, dass wir einen Fallback-Titel haben
+        if (!title) {
+            try {
+                const urlObj = new URL(url);
+                title = urlObj.hostname;
+            } catch (e) {
+                title = "Unbekannte Webseite";
             }
         }
 
-        if (!image || image.includes('favicon') || image.includes('icon')) {
-            $('img[src]').each((_, img) => {
-                const src = $(img).attr('src') || ''
-                const width = parseInt($(img).attr('width') || '0')
-                const height = parseInt($(img).attr('height') || '0')
+        const absoluteImageURL = image && (image.startsWith('http') ? image : (new URL(image, url)).href);
 
-                if (src.length > 10 && (!width || !height || (width > 100 && height > 100))) {
-                    if (!src.match(/^https?:\/\//)) {
-                        const base = new URL(normalizedUrl)
-                        if (src.startsWith('//')) {
-                            image = `https:${src}`
-                        } else if (src.startsWith('/')) {
-                            image = `${base.origin}${src}`
-                        } else {
-                            image = `${base.origin}/${src}`
-                        }
-                    } else {
-                        image = src
-                    }
-                    return false
-                }
-            })
-        }
+        return NextResponse.json({ title, image: absoluteImageURL || '' });
 
-        return NextResponse.json({
-            title: title.trim(),
-            image: image.trim(),
-            url: normalizedUrl,
-        })
-
-    } catch (err) {
-        console.error('Fehler bei der Link-Vorschau:', err)
-        if (err.name === 'AbortError') {
-            return NextResponse.json({
-                error: 'Timeout',
-                title: new URL(normalizedUrl).hostname,
-                url: normalizedUrl,
-            }, { status: 408 })
-        }
-        return NextResponse.json({
-            title: new URL(normalizedUrl).hostname,
-            image: '',
-            url: normalizedUrl,
-        }, { status: 500 })
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Link-Vorschau:', error);
+        return NextResponse.json({ error: 'Fehler beim Abrufen der Link-Vorschau' }, { status: 500 });
     }
 }
