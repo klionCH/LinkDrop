@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+🔗 LinkDrop – Links einfach teilen
 
-## Getting Started
+LinkDrop ist eine minimalistische Web-App, mit der du Sammlungen von Links erstellen und teilen kannst – ganz ohne Account, ganz ohne Cloud. Die App läuft komplett im Browser und speichert deine Daten lokal.
 
-First, run the development server:
+Ein klassisches Beispiel: Du möchtest eine Wunschliste aus Produkten verschiedener Online-Shops zusammenstellen und mit Familie oder Freunden teilen. Statt einzelne Links zu verschicken, erstellst du mit LinkDrop eine gemeinsame Liste – einfach, übersichtlich und direkt teilbar.
 
-```bash
+✨ Funktionen
+
+➕ Links zu beliebigen Webseiten hinzufügen
+
+🖼 Automatische Vorschau bei unterstützten Seiten (Titel, Bild, Beschreibung)
+
+💾 Speicherung erfolgt im Browser (localStorage)
+
+📤 Wunschliste teilen via JSON-Datei
+
+📥 Wunschliste importieren über Datei oder Link
+
+🧪 Beispielanwendung: Wunschliste
+
+Öffne LinkDrop
+
+Füge Produkte aus verschiedenen Shops hinzu
+
+Gib Notizen oder Größenwünsche an
+
+Teile die fertige Wunschliste mit einem Klick als Link
+
+🚀 Starte lokal
+
+git clone https://github.com/klionch/linkdrop.git
+cd linkdrop
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Die App ist nun unter http://localhost:3000 erreichbar.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+🧠 Technologie
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Next.js
 
-## Learn More
+React
 
-To learn more about Next.js, take a look at the following resources:
+Tailwind CSS
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+localStorage / JSON Export
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+📄 Lizenz
 
-## Deploy on Vercel
+MIT – kostenlos nutzbar und anpassbar.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+🤝 Mitmachen
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Fehler gefunden? Feature-Idee? Mach gerne ein Issue oder Pull Request auf – ich freuen mich!
+
