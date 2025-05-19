@@ -28,7 +28,7 @@ Ein klassisches Beispiel: Du möchtest eine Wunschliste aus Produkten verschiede
 ## 🚀 Starte lokal
 
 ```bash
-git clone https://github.com/klionch/linkdrop.git
+git clone https://github.com/klionCH/WishDrop.git
 cd linkdrop
 npm install
 npm run dev
