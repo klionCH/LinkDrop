@@ -1,6 +1,6 @@
 # 🔗 LinkDrop – Links einfach teilen
 
-**LinkDrop** ist eine minimalistische Web-App, mit der du Sammlungen von Links erstellen und teilen kannst – ganz ohne Account, ganz ohne Cloud. Die App läuft komplett im Browser und speichert deine Daten lokal.
+**LinkDrop** ist eine minimalistische Web-App, mit der du Sammlungen von Links erstellen und teilen kannst – ganz ohne Account, ganz ohne Cloud. Alles wird im Browser gespeichert.
 
 Ein klassisches Beispiel: Du möchtest eine Wunschliste aus Produkten verschiedener Online-Shops zusammenstellen und mit Familie oder Freunden teilen. Statt einzelne Links zu verschicken, erstellst du mit LinkDrop eine gemeinsame Liste – einfach, übersichtlich und direkt teilbar.
 
@@ -44,6 +44,9 @@ Die App ist nun unter `http://localhost:3000` erreichbar.
 * React
 * Tailwind CSS
 * localStorage / JSON Export
+  
+* Shadcn
+* dnd kit
 
 ---
 
